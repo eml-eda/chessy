@@ -1,9 +1,9 @@
-# This script resets the ZCU102 board and programs it with a specified bitstream and LTX file.
+# This script resets the ZCU102 board and programs it with a specified bitstream and LTX file given as args.
 
 # Files
-set bitstream_file "/home/zcu102/cheshire_top_xilinx.bit"
-set ltx_file "/home/zcu102/cheshire_top_xilinx.ltx"
 set board_name "xczu9_0"
+set bitstream_file "./hw/build/cheshire.bit"
+set ltx_file "./hw/build/cheshire.ltx"
 
 # Check if the files exist
 if {![file exists $bitstream_file]} {
