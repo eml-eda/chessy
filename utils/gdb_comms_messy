@@ -1,0 +1,4 @@
+target extended-remote localhost:3333
+file /git/cheshire/sw/tests/gdb_test.spm.elf
+load
+break trap_vector
