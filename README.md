@@ -39,3 +39,13 @@ Make sure to clone recursively to include all submodules:
 ```bash
 git clone --recursive https://github.com/eml-eda/chessy.git
 ```
+
+### 2. Check Available Targets
+
+Now run:
+
+```bash
+make help
+```
+
+This will display all available targets and their descriptions, helping you understand what you can do with the Chessy framework.
