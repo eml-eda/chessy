@@ -4,13 +4,9 @@
 
 This repository contains the utilities to run Chessy, including the necessary scripts and configurations to set up the co-simulation environment.
 
----
-
 ## Platform
 
 Chessy targets the **Xilinx ZCU102** FPGA development board to map the Cheshire system onto the programmable logic. However, the flow can be adapted to other platforms as well.
-
----
 
 ## 🚀 Quick Start
 
@@ -29,6 +25,12 @@ Make sure you have the following tools installed:
   - Debug Netlist (LTX): `./hw/build/cheshire.ltx`
 
   _Can be omitted if the board is already flashed with the Cheshire bitstream._
+
+- **libjim**: _Required for building OpenOCD_
+  Install the library by running:
+  ```bash
+  sudo apt install libjim-dev
+  ```
 
 ### 1. Clone the Repository
 
