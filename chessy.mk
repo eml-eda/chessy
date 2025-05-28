@@ -71,16 +71,10 @@ sw-oocd-start: ## Start OpenOCD for Cheshire in the background.
 		echo "OpenOCD started in the background, check $(CHESSY_ROOT)/tmp/openocd.log."; \
 	fi
 
-PGREP_MATCH := "$(OPENOCD_ROOT)/src/$(OpenOCD) -f $(CHESSY_ROOT)/sw/utils/zcu102.cfg"
 .PHONY: sw-oocd-stop
-sw-oocd-stop: ## Kill OpenOCD process if running.
-	@pkill -9 -f $(PGREP_MATCH)
-	@if [ $$? -eq 0 ]; then \
-		echo "OpenOCD process stopped successfully."; \
-	else \
-		echo "No OpenOCD process found to stop."; \
-	fi
-
+sw-oocd-stop: ## Kill all OpenOCD process if running.
+	@pkill -u $(USER) -9 openocd && \
+	echo "OpenOCD processes killed."
 
 ##@ Hardware
 

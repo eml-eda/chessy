@@ -26,7 +26,7 @@ Make sure you have the following tools installed:
 
   _Can be omitted if the board is already flashed with the Cheshire bitstream._
 
-- **libjim**: _Required for building OpenOCD_
+- **libjim**: _Required for building OpenOCD_   
   Install the library by running:
   ```bash
   sudo apt install libjim-dev
