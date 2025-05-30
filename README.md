@@ -32,7 +32,7 @@ Make sure you have the following tools installed:
   sudo apt install libjim-dev
   ```
 
-### 1. Clone the Repository
+### 1. Clone the Repository and Set Up the Environment
 
 Make sure to clone recursively to include all submodules:
 
@@ -40,9 +40,42 @@ Make sure to clone recursively to include all submodules:
 git clone --recursive https://github.com/eml-eda/chessy.git
 ```
 
-### 2. Check Available Targets
+If you want to use custom paths instead of the defaults, you can set them in the `local.mk` file. For example, to use your own version of Messy, add or edit the following line in `local.mk`:
 
-Now run:
+```make
+MESSY_ROOT ?= /path/to/your/messy
+```
+
+After cloning the repository, build the necessary components by running:
+
+```bash
+make build-all
+```
+
+This will build the Cheshire tests, the Messy docker image, and OpenOCD with the required configurations.
+
+### 2. Connect the ZCU102 Board and flash the Cheshire Bitstream
+Connect the ZCU102 board to your host computer via USB, attach the UART adapter, and ensure the board is powered on. Then, flash the Cheshire bitstream using the following command:
+
+```bash
+make board-flash
+```
+
+Now, the board should be ready to run Cheshire workloads.
+
+### 3. Run a test on Cheshire
+
+To test that everything is set up correctly, you can run a simple helloworld program on Cheshire:
+
+```bash
+make run-all
+```
+This command will execute the Cheshire `helloworld` test, which is a basic program that prints "Hello World!" to the console through the UART adapter script. 
+
+
+## Check Other Available Targets
+
+You can check the rest of the targets in the `Makefile` by running:
 
 ```bash
 make help

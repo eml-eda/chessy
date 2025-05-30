@@ -26,6 +26,7 @@ dataset/*
 
 sysc
 tmp
+log
 **/build
 
 ## LANGUAGE - SPECIFIC
