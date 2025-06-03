@@ -13,7 +13,7 @@ RV64_GDB ?= riscv64-unknown-elf-gdb
 DOCKER   ?= docker
 PYTHON   ?= python3
 
-# Variables TODO: Make these configurable
+# Variables
 CHESHIRE_TEST_DIR ?= $(CHESHIRE_ROOT)/sw/tests
 CHESHIRE_TEST_BIN ?= $(CHESHIRE_TEST_DIR)/helloworld.spm.elf
 
@@ -105,28 +105,28 @@ chs-build: ## Build Cheshire tests.
 	@cd $(CHESHIRE_ROOT) && $(MAKE) chs-sw-all
 
 .PHONY: chs-start
-chs-start: ## Start Cheshire test through GDB in the background.
+chs-start: ## Start Cheshire test through GDB in the background. Use BIN=<file> to specify a binary name.
 	@if ! command -v $(RV64_GDB) >/dev/null 2>&1; then \
 		echo "RV64 GDB not found."; exit 1; fi
-	@if [ ! -f "$(CHESHIRE_TEST_BIN)" ]; then \
+	@if [ ! -f "$(CHESHIRE_TEST_DIR)/$(if $(BIN),$(BIN),$(CHESHIRE_TEST_BIN))" ]; then \
 		echo "Cheshire test binary not found."; exit 1; fi
 	@mkdir -p $(CHESSY_ROOT)/log
 	@$(RV64_GDB) -ex "set confirm off" \
 		-ex "target extended-remote localhost:3333" \
-		-ex "file $(CHESHIRE_TEST_BIN)" \
+		-ex "file $(CHESHIRE_TEST_DIR)/$(if $(BIN),$(BIN),$(CHESHIRE_TEST_BIN))" \
 		-ex "load" \
 		-ex "continue" \
 		> $(CHESSY_ROOT)/log/cheshire.log 2>&1 & \
 	echo "Cheshire started. Log: $(CHESSY_ROOT)/log/cheshire.log"
 
 .PHONY: chs-start-i
-chs-start-i: ## Start Cheshire test in interactive mode.
+chs-start-i: ## Start Cheshire test in interactive mode. Use BIN=<file> to specify a binary name.
 	@if ! command -v $(RV64_GDB) >/dev/null 2>&1; then \
 		echo "RV64 GDB not found."; exit 1; fi
-	@if [ ! -f "$(CHESHIRE_TEST_BIN)" ]; then \
-		echo "Binary not found."; exit 1; fi
+	@if [ ! -f "$(CHESHIRE_TEST_DIR)/$(if $(BIN),$(BIN),$(CHESHIRE_TEST_BIN))" ]; then \
+		echo "Cheshire test binary not found."; exit 1; fi
 	@$(RV64_GDB) -ex "target extended-remote localhost:3333" \
-		-ex "file $(CHESHIRE_TEST_BIN)" \
+		-ex "file $(CHESHIRE_TEST_DIR)/$(if $(BIN),$(BIN),$(CHESHIRE_TEST_BIN))" \
 		-ex "load"
 
 .PHONY: chs-stop
