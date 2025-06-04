@@ -14,8 +14,11 @@ DOCKER   ?= docker
 PYTHON   ?= python3
 
 # Variables
+BIN ?= semihost_helloworld.spm.elf
+INTER ?= 0
+
 CHESHIRE_TEST_DIR ?= $(CHESHIRE_ROOT)/sw/tests
-CHESHIRE_TEST_BIN ?= $(CHESHIRE_TEST_DIR)/helloworld.spm.elf
+CHESHIRE_TEST_BIN ?= $(CHESHIRE_TEST_DIR)/$(BIN)
 
 
 ##@ General
@@ -37,28 +40,20 @@ all: ## Build all components and run the Cheshire test.
 
 .PHONY: build-all
 build-all: ## Build all components.
-	$(MAKE) submodules
 	$(MAKE) chs-build
 	$(MAKE) messy-docker-build
 	$(MAKE) oocd-build
 
 .PHONY: run-all
-run-all: ## Run the needed components and start the Cheshire test. TODO: fix UART
+run-all: ## Run the needed components and start the Cheshire test. Use BIN=<filename> to specify the test binary.
 	$(MAKE) stop-all
-	$(MAKE) oocd-start
-	$(MAKE) chs-start
-	-$(MAKE) board-uart
-	$(MAKE) stop-all
+	$(MAKE) chs-start INTER=0
+	$(MAKE) oocd-start INTER=1
 
 .PHONY: stop-all
 stop-all: ## Stop all running components.
 	$(MAKE) oocd-stop
 	$(MAKE) chs-stop
-	$(MAKE) board-uart-stop
-
-.PHONY: submodules
-submodules: ## Update all submodules.
-	@git submodule update --init --recursive
 
 .PHONY: clean
 clean: ## Clean tmp and log files.
@@ -77,24 +72,23 @@ clean-all: ## Clean all build artifacts.
 
 .PHONY: messy-docker-build
 messy-docker-build: ## Build Docker image for Messy.
-	@if $(DOCKER) images | grep -q "^messy "; then \
-		echo "Messy Docker image already exists."; \
-	else \
-		$(DOCKER) build . \
-			-f $(MESSY_ROOT)/docker/pulp-open/Dockerfile \
-			-t messy \
-			--build-arg USER_ID=$(shell id -u $(USER)) \
-			--build-arg GROUP_ID=$(shell id -g $(USER)); \
-	fi
+	@cd $(MESSY_ROOT) && \
+	$(DOCKER) build . \
+		-f docker/pulp-open/Dockerfile \
+		-t messy \
+		--build-arg USER_ID=$(shell id -u $(USER)) \
+		--build-arg GROUP_ID=$(shell id -g $(USER));
+
 
 .PHONY: messy-docker-run
 messy-docker-run: ## Run Messy Docker container.
-	@if ! $(DOCKER) images | grep -q messy; then \
+	@if ! $(DOCKER) images | grep -q "^messy "; then \
 		echo "Messy Docker image not found."; exit 1; \
 	fi
 	@$(DOCKER) run -it --rm \
 		-v $(MESSY_ROOT):/messy \
 		--network=host \
+		--user root \
 		messy || true
 
 
@@ -105,29 +99,25 @@ chs-build: ## Build Cheshire tests.
 	@cd $(CHESHIRE_ROOT) && $(MAKE) chs-sw-all
 
 .PHONY: chs-start
-chs-start: ## Start Cheshire test through GDB in the background. Use BIN=<file> to specify a binary name.
+chs-start: ## Start Cheshire test through GDB. Use INTER=1 for interactive mode, use BIN=<filename> to specify the test binary.
 	@if ! command -v $(RV64_GDB) >/dev/null 2>&1; then \
 		echo "RV64 GDB not found."; exit 1; fi
-	@if [ ! -f "$(CHESHIRE_TEST_DIR)/$(if $(BIN),$(BIN),$(CHESHIRE_TEST_BIN))" ]; then \
-		echo "Cheshire test binary not found."; exit 1; fi
+	@if [ ! -f "$(CHESHIRE_TEST_BIN)" ]; then \
+		echo "Cheshire test binary not found: $(CHESHIRE_TEST_BIN)"; exit 1; fi
 	@mkdir -p $(CHESSY_ROOT)/log
-	@$(RV64_GDB) -ex "set confirm off" \
-		-ex "target extended-remote localhost:3333" \
-		-ex "file $(CHESHIRE_TEST_DIR)/$(if $(BIN),$(BIN),$(CHESHIRE_TEST_BIN))" \
-		-ex "load" \
-		-ex "continue" \
-		> $(CHESSY_ROOT)/log/cheshire.log 2>&1 & \
-	echo "Cheshire started. Log: $(CHESSY_ROOT)/log/cheshire.log"
-
-.PHONY: chs-start-i
-chs-start-i: ## Start Cheshire test in interactive mode. Use BIN=<file> to specify a binary name.
-	@if ! command -v $(RV64_GDB) >/dev/null 2>&1; then \
-		echo "RV64 GDB not found."; exit 1; fi
-	@if [ ! -f "$(CHESHIRE_TEST_DIR)/$(if $(BIN),$(BIN),$(CHESHIRE_TEST_BIN))" ]; then \
-		echo "Cheshire test binary not found."; exit 1; fi
-	@$(RV64_GDB) -ex "target extended-remote localhost:3333" \
-		-ex "file $(CHESHIRE_TEST_DIR)/$(if $(BIN),$(BIN),$(CHESHIRE_TEST_BIN))" \
-		-ex "load"
+	@if [ "$(INTER)" = "1" ]; then \
+		$(RV64_GDB) -ex "target extended-remote localhost:3333" \
+			-ex "file $(CHESHIRE_TEST_BIN)" \
+			-ex "load"; \
+	else \
+		$(RV64_GDB) -ex "set confirm off" \
+			-ex "target extended-remote localhost:3333" \
+			-ex "file $(CHESHIRE_TEST_BIN)" \
+			-ex "load" \
+			-ex "continue" \
+			> $(CHESSY_ROOT)/log/cheshire.log 2>&1 & \
+		echo "Cheshire started. Log: $(CHESSY_ROOT)/log/cheshire.log"; \
+	fi
 
 .PHONY: chs-stop
 chs-stop: ## Stop Cheshire GDB process.
@@ -146,16 +136,16 @@ oocd-build: ## Build OpenOCD binaries.
 	@cd $(OPENOCD_ROOT) && ./bootstrap && ./configure --enable-ftdi && $(MAKE) -j$(shell nproc)
 
 .PHONY: oocd-start
-oocd-start: ## Start OpenOCD in background.
+oocd-start: ## Start OpenOCD. Use INTER=1 for interactive mode.
 	@if [ ! -x "$(OPENOCD_ROOT)/src/$(OpenOCD)" ]; then \
 		echo "Build OpenOCD first."; exit 1; fi
 	@mkdir -p $(CHESSY_ROOT)/log
-	@nohup $(OPENOCD_ROOT)/src/$(OpenOCD) -f $(CHESSY_ROOT)/sw/utils/zcu102.cfg > $(CHESSY_ROOT)/log/openocd.log 2>&1 & \
-	echo "OpenOCD started. Log: $(CHESSY_ROOT)/log/openocd.log"
-
-.PHONY: oocd-start-i
-oocd-start-i: ## Start OpenOCD in interactive mode.
-	@$(OPENOCD_ROOT)/src/$(OpenOCD) -f $(CHESSY_ROOT)/sw/utils/zcu102.cfg
+	@if [ "$(INTER)" = "1" ]; then \
+		$(OPENOCD_ROOT)/src/$(OpenOCD) -f $(CHESSY_ROOT)/sw/utils/zcu102.cfg; \
+	else \
+		nohup $(OPENOCD_ROOT)/src/$(OpenOCD) -f $(CHESSY_ROOT)/sw/utils/zcu102.cfg > $(CHESSY_ROOT)/log/openocd.log 2>&1 & \
+		echo "OpenOCD started. Log: $(CHESSY_ROOT)/log/openocd.log"; \
+	fi
 
 .PHONY: oocd-stop
 oocd-stop: ## Kill all OpenOCD process if running.
@@ -175,7 +165,7 @@ board-flash: ## Flash the board.
 	@cd $(CHESSY_ROOT)/tmp && $(VIVADO) -mode batch -source $(CHESSY_ROOT)/hw/scripts/flash_board.tcl
 
 .PHONY: board-flash-clean
-board-flash-clean:
+board-flash-clean: ## Clean temporary files after flashing the board.
 	@rm -rf $(CHESSY_ROOT)/tmp
 
 .PHONY: board-uart

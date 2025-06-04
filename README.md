@@ -70,7 +70,7 @@ To test that everything is set up correctly, you can run a simple helloworld pro
 ```bash
 make run-all
 ```
-This command will execute the Cheshire `helloworld` test, which is a basic program that prints "Hello World!" to the console through the UART adapter script. 
+This command will execute the Cheshire `helloworld` test, which is a basic program that prints "Hello World from Cheshire!" to the OpenOCD console.
 
 
 ## Check Other Available Targets
