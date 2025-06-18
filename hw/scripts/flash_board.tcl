@@ -2,8 +2,8 @@
 
 # Files
 set board_name "xczu9_0"
-set bitstream_file "./hw/build/cheshire.bit"
-set ltx_file "./hw/build/cheshire.ltx"
+set bitstream_file "../hw/build/cheshire.bit"
+set ltx_file "../hw/build/cheshire.ltx"
 
 # Check if the files exist
 if {![file exists $bitstream_file]} {
