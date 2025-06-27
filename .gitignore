@@ -4,6 +4,7 @@
 *.o
 *.jou
 
+*.messy
 deps
 venv
 messy/src

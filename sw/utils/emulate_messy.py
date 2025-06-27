@@ -5,11 +5,13 @@
 
 FILE_REQ_ADDR = "/home/zcu102/git/chessy/req_addr.messy"
 FILE_REQ_DATA = "/home/zcu102/git/chessy/req_data.messy"
-CHESSY_TEST_BIN = "/home/zcu102/git/chessy/sw/cheshire/sw/tests/semihost_helloworld.spm.elf"
+CHESSY_TEST_BIN = "/home/zcu102/git/chessy/sw/cheshire/sw/tests/fake_sensor.spm.elf"
 
 from pygdbmi.gdbcontroller import GdbController
 import sys
 import time
+
+DEBUG = False
 
 #
 # Formatting utilities
@@ -29,39 +31,51 @@ def color_print(text, color):
     print(f"{color}{text}{Color.RESET}")
 
 def print_gdb_response(response):
-    for resp in response:
-        resp_type = resp.get('type')
-        payload = resp.get('payload')
-        
-        if payload and 'msg' in payload:
-            content = payload['msg']
-        elif payload:
-            content = payload
-        else:
-            content = str(resp)
+    if not DEBUG:
+        color_print("Sent GDB Command @ " + time.strftime("%Y-%m-%d %H:%M:%S"), Color.GRAY)
+    else:
+        color_print("GDB Response @ " + time.strftime("%Y-%m-%d %H:%M:%S"), Color.MAGENTA)    
+        for resp in response:
+            resp_type = resp.get('type')
+            payload = resp.get('payload')
             
-        # Filter out unneeded banner messages
-        if resp_type == 'console' and ('GNU gdb' in content or 'Copyright' in content):
-            continue
-
-        if resp_type == 'result':
-            if resp.get('message') == 'done':
-                color_print(f"[DONE] {content}", Color.GREEN)
-            elif resp.get('message') == 'error':
-                color_print(f"[ERROR] {content}", Color.RED)
+            if payload and 'msg' in payload:
+                content = payload['msg']
+            elif payload:
+                content = payload
             else:
-                color_print(f"[RESULT] {resp.get('message')}", Color.CYAN)
-        elif resp_type == 'console':
-            color_print(f"[CONSOLE] {content.strip()}", Color.YELLOW)
-        elif resp_type == 'log':
-            color_print(f"[LOG] {content.strip()}", Color.GRAY)
-        elif resp_type == 'target':
-            color_print(f"[TARGET] {content.strip()}", Color.CYAN)
-        elif resp_type == 'notify':
-            #color_print(f"[NOTIFY] {content}", Color.GRAY)
-            continue
-        else:
-            print(resp)
+                content = str(resp)
+                
+            # Filter out unneeded banner messages
+            if resp_type == 'console' and ('GNU gdb' in content or 'Copyright' in content):
+                continue
+
+            if resp_type == 'result':
+                if resp.get('message') == 'done':
+                    color_print(f"[DONE] {content}", Color.GREEN)
+                elif resp.get('message') == 'error':
+                    color_print(f"[ERROR] {content}", Color.RED)
+                else:
+                    color_print(f"[RESULT] {resp.get('message')}", Color.CYAN)
+            elif resp_type == 'console':
+                color_print(f"[CONSOLE] {content.strip()}", Color.YELLOW)
+            elif resp_type == 'log':
+                color_print(f"[LOG] {content.strip()}", Color.GRAY)
+            elif resp_type == 'target':
+                color_print(f"[TARGET] {content.strip()}", Color.CYAN)
+            elif resp_type == 'notify':
+                #color_print(f"[NOTIFY] {content}", Color.GRAY)
+                continue
+            else:
+                print(resp)
+
+def parse_value_from_response(response):
+    for resp in response:
+        if resp.get('type') == 'result' and resp.get('message') == 'done':
+            if 'value' in resp.get('payload', {}):
+                return resp['payload']['value']
+
+    return None
 
 #
 # Test
@@ -73,14 +87,28 @@ def test_chessy(gdbmi : GdbController):
     # Load the binary
     print_gdb_response(gdbmi.write('-file-exec-and-symbols ' + CHESSY_TEST_BIN))
     print_gdb_response(gdbmi.write('-target-download'))
-    # Break at trap_vector
-    print_gdb_response(gdbmi.write('-break-insert trap_vector'))
-    # Run the program
+
+    # Wait for the break 1
+    print_gdb_response(gdbmi.write('-exec-continue', timeout_sec=20))
+    sensor_addr = parse_value_from_response(gdbmi.write('-data-evaluate-expression sensor_address'))
+    sensor_data = int(parse_value_from_response(gdbmi.write('-data-evaluate-expression sensor_data')))
+    new_data = sensor_data + 1
+    print(f"Sensor address: {sensor_addr}, Sensor data: {sensor_data}, New data: {new_data}")
+    
+    print_gdb_response(gdbmi.write('set $pc=$pc+2'))  # Skip the ebreak
+    print_gdb_response(gdbmi.write('-exec-continue'))
+
+    # Wait for the break 2
+    print_gdb_response(gdbmi.write('-exec-continue', timeout_sec=20))
+    new_sensor_addr = parse_value_from_response(gdbmi.write('-data-evaluate-expression sensor_address'))
+    if new_sensor_addr == sensor_addr:
+        print_gdb_response(gdbmi.write('set sensor_data=' + str(new_data)))
+        print(f"Sensor address: {new_sensor_addr}, Sensor data updated to: {new_data}")
+    print_gdb_response(gdbmi.write('set $pc=$pc+2'))  # Skip the ebreak
     print_gdb_response(gdbmi.write('-exec-continue'))
     
-    # Stop the program
-    #print_gdb_response(gdbmi.write('-exec-interrupt'))
-    time.sleep(2)
+    # Wait for finish
+    print_gdb_response(gdbmi.write('-exec-continue', timeout_sec=20, raise_error_on_timeout=False))
     
     return
 
