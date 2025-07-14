@@ -81,12 +81,13 @@ messy-docker-build: ## Build Docker image for Messy.
 
 
 .PHONY: messy-docker-run
-messy-docker-run: ## Run Messy Docker container.
+messy-docker-run: ## Run Messy Docker container. TODO: remove git mount
 	@if ! $(DOCKER) images | grep -q "^messy "; then \
 		echo "Messy Docker image not found."; exit 1; \
 	fi
 	@$(DOCKER) run -it --rm \
 		-v $(MESSY_ROOT):/messy \
+		-v $(MESSY_ROOT)/..:/git \
 		--network=host \
 		--user root \
 		messy || true
@@ -98,8 +99,16 @@ messy-docker-run: ## Run Messy Docker container.
 chs-build: ## Build Cheshire tests.
 	@cd $(CHESHIRE_ROOT) && $(MAKE) chs-sw-all
 
-.PHONY: chs-start
-chs-start: ## Start Cheshire test through GDB. Use INTER=1 for interactive mode, use BIN=<filename> to specify the test binary.
+
+.PHONY: chs-clean
+chs-clean: ## Clean Cheshire build.
+	@cd $(CHESHIRE_ROOT) && $(MAKE) clean
+
+
+##@ GDB
+
+.PHONY: gdb-start
+gdb-start: ## Start Cheshire test through GDB. Use INTER=1 for interactive mode, use BIN=<filename> to specify the test binary.
 	@if ! command -v $(RV64_GDB) >/dev/null 2>&1; then \
 		echo "RV64 GDB not found."; exit 1; fi
 	@if [ ! -f "$(CHESHIRE_TEST_BIN)" ]; then \
@@ -119,14 +128,10 @@ chs-start: ## Start Cheshire test through GDB. Use INTER=1 for interactive mode,
 		echo "Cheshire started. Log: $(CHESSY_ROOT)/log/cheshire.log"; \
 	fi
 
-.PHONY: chs-stop
-chs-stop: ## Stop Cheshire GDB process.
+.PHONY: gdb-stop
+gdb-stop: ## Stop the GDB process.
 	@pkill -u $(USER) -9 $(RV64_GDB) || true && \
 	echo "Cheshire GDB process killed."
-
-.PHONY: chs-clean
-chs-clean: ## Clean Cheshire build.
-	@cd $(CHESHIRE_ROOT) && $(MAKE) clean
 
 
 ##@ OpenOCD
@@ -157,7 +162,7 @@ oocd-clean: ## Clean OpenOCD build.
 	@cd $(OPENOCD_ROOT) && $(MAKE) clean
 
 
-##@ Board
+##@ Board Utils
 
 .PHONY: board-flash
 board-flash: ## Flash the board.

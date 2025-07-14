@@ -11,7 +11,7 @@ from pygdbmi.gdbcontroller import GdbController
 import sys
 import time
 
-DEBUG = False
+DEBUG = True
 
 #
 # Formatting utilities
@@ -82,11 +82,6 @@ def parse_value_from_response(response):
 #
 
 def test_chessy(gdbmi : GdbController):
-    # Connect to target
-    print_gdb_response(gdbmi.write('-target-select extended-remote localhost:3333'))
-    # Load the binary
-    print_gdb_response(gdbmi.write('-file-exec-and-symbols ' + CHESSY_TEST_BIN))
-    print_gdb_response(gdbmi.write('-target-download'))
 
     # Wait for the break 1
     print_gdb_response(gdbmi.write('-exec-continue', timeout_sec=20))
@@ -112,6 +107,15 @@ def test_chessy(gdbmi : GdbController):
     
     return
 
+def interactive_test(gdbmi: GdbController):
+    while True:
+        user_cmd = input("Enter GDB command (or 'exit' to quit): ")
+        if user_cmd.strip().lower() == 'exit':
+            print("Exiting interactive test.")
+            break
+        response = gdbmi.write(user_cmd)
+        print_gdb_response(response)
+
 #
 # Main
 #
@@ -123,9 +127,17 @@ def main():
     gdbmi.write('-gdb-set pagination off')
     gdbmi.write('-gdb-set verbose off')
     gdbmi.write('-gdb-set confirm off')
+    
+    # Connect to target
+    gdbmi.write('-target-select extended-remote localhost:3333')
+    
+    # Load the binary
+    gdbmi.write('-file-exec-and-symbols ' + CHESSY_TEST_BIN)
+    gdbmi.write('-target-download')
 
     try:
-        test_chessy(gdbmi)
+        #test_chessy(gdbmi)
+        interactive_test(gdbmi)
 
     except KeyboardInterrupt:
         print("\nExiting...")
