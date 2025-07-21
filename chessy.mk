@@ -81,13 +81,13 @@ messy-docker-build: ## Build Docker image for Messy.
 
 
 .PHONY: messy-docker-run
-messy-docker-run: ## Run Messy Docker container. TODO: remove git mount
+messy-docker-run: ## Run Messy Docker container.
 	@if ! $(DOCKER) images | grep -q "^messy "; then \
 		echo "Messy Docker image not found."; exit 1; \
 	fi
 	@$(DOCKER) run -it --rm \
 		-v $(MESSY_ROOT):/messy \
-		-v $(MESSY_ROOT)/..:/git \
+		-v $(CHESHIRE_ROOT)/sw/tests:/tests \
 		--network=host \
 		--user root \
 		messy || true
