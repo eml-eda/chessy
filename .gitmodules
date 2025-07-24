@@ -1,7 +1,7 @@
 [submodule "messy"]
 	path = sw/messy
-	url = https://github.com/eml-eda/messy-devel.git
-	branch = cheshire-adapter
+	url = https://github.com/eml-eda/messy.git
+	branch = dev-cheshire-adapter
 [submodule "openocd"]
 	path = sw/openocd
 	url = https://github.com/riscv-collab/riscv-openocd.git

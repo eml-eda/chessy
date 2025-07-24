@@ -11,6 +11,8 @@ messy/src
 messy/include
 local.mk
 
+.vscode
+
 *BUILD/
 doc_env/
 messy/.gitignore
