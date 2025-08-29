@@ -15,6 +15,7 @@ PYTHON   ?= python3
 
 # Variables
 BIN ?= semihost_helloworld.spm.elf
+GDB_ARGS ?=
 INTER ?= 0
 
 CHESHIRE_TEST_DIR ?= $(CHESHIRE_ROOT)/sw/tests
@@ -95,13 +96,13 @@ chs-clean: ## Clean Cheshire build.
 ##@ GDB
 
 .PHONY: gdb-start
-gdb-start: ## Start Cheshire test through GDB. Use BIN=<filename> to specify the test binary.
+gdb-start: ## Start Cheshire test through GDB. Possible args: BIN=<filename>, GDB_ARGS=<args>.
 	@if ! command -v $(RV64_GDB) >/dev/null 2>&1; then \
 		echo "RV64 GDB not found."; exit 1; fi
 	@if [ ! -f "$(CHESHIRE_TEST_BIN)" ]; then \
 		echo "Cheshire test binary not found: $(CHESHIRE_TEST_BIN)"; exit 1; fi
 	@mkdir -p $(CHESSY_ROOT)/log
-	@$(RV64_GDB) -ex "target extended-remote localhost:3333" \
+	@$(RV64_GDB) $(GDB_ARGS) -ex "target extended-remote localhost:3333" \
 		-ex "file $(CHESHIRE_TEST_BIN)" \
 		-ex "load"
 
@@ -118,7 +119,7 @@ oocd-build: ## Build OpenOCD binaries.
 	@cd $(OPENOCD_ROOT) && ./bootstrap && ./configure --enable-ftdi && $(MAKE) -j$(shell nproc)
 
 .PHONY: oocd-start
-oocd-start: ## Start OpenOCD in interactive mode only.
+oocd-start: ## Start OpenOCD in interactive mode.
 	@if [ ! -x "$(OPENOCD_ROOT)/src/$(OpenOCD)" ]; then \
 		echo "Build OpenOCD first."; exit 1; fi
 	@mkdir -p $(CHESSY_ROOT)/log
