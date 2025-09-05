@@ -18,6 +18,7 @@ BIN ?= semihost_helloworld.spm.elf
 GDB_ARGS ?=
 GDB_PORT ?= 3334
 INTER ?= 0
+DATASET_GEN_SAMPLES ?= 10
 
 CHESHIRE_TEST_DIR ?= $(CHESHIRE_ROOT)/sw/tests
 CHESHIRE_TEST_BIN ?= $(CHESHIRE_TEST_DIR)/$(BIN)
@@ -130,7 +131,14 @@ oocd-clean: ## Clean OpenOCD build.
 	@cd $(OPENOCD_ROOT) && $(MAKE) clean
 
 
-##@ Board Utils
+##@ Utilities
+
+.PHONY: dataset-generate
+dataset-generate: ## Generate gesture sensor dataset file. Possible args: DATASET_GEN_SAMPLES=<num_samples>.
+	@cd $(CHESSY_ROOT)/sw/utils && \
+	$(PYTHON) generate_dataset.py $(DATASET_GEN_SAMPLES) && \
+	mv dataset.bin $(CHESSY_ROOT)/sw/messy/messy/input_files/gesture/gesture_dataset.bin && \
+	echo "Dataset generated at $(CHESSY_ROOT)/sw/messy/messy/input_files/gesture/gesture_dataset.bin"
 
 .PHONY: board-flash
 board-flash: ## Flash the board.
