@@ -16,6 +16,7 @@ PYTHON   ?= python3
 # Variables
 BIN ?= semihost_helloworld.spm.elf
 GDB_ARGS ?=
+GDB_PORT ?= 3334
 INTER ?= 0
 
 CHESHIRE_TEST_DIR ?= $(CHESHIRE_ROOT)/sw/tests
@@ -33,12 +34,6 @@ help: ## Display this help.
 	/^##@/ { \
 		printf "\n\033[1m%s\033[0m\n", substr($$0, 5) \
 	}' $(MAKEFILE_LIST)
-
-.PHONY: build-all
-build-all: ## Build all components.
-	$(MAKE) chs-build
-	$(MAKE) messy-docker-build
-	$(MAKE) oocd-build
 
 .PHONY: stop-all
 stop-all: ## Stop all running components.
@@ -64,7 +59,7 @@ clean-all: ## Clean all build artifacts.
 messy-docker-build: ## Build Docker image for Messy.
 	@cd $(MESSY_ROOT) && \
 	$(DOCKER) build . \
-		-f docker/pulp-open/Dockerfile \
+		-f docker/cheshire/Dockerfile \
 		-t messy \
 		--build-arg USER_ID=$(shell id -u $(USER)) \
 		--build-arg GROUP_ID=$(shell id -g $(USER));
@@ -102,7 +97,7 @@ gdb-start: ## Start Cheshire test through GDB. Possible args: BIN=<filename>, GD
 	@if [ ! -f "$(CHESHIRE_TEST_BIN)" ]; then \
 		echo "Cheshire test binary not found: $(CHESHIRE_TEST_BIN)"; exit 1; fi
 	@mkdir -p $(CHESSY_ROOT)/log
-	@$(RV64_GDB) $(GDB_ARGS) -ex "target extended-remote localhost:3333" \
+	@$(RV64_GDB) $(GDB_ARGS) -ex "target extended-remote localhost:$(GDB_PORT)" \
 		-ex "file $(CHESHIRE_TEST_BIN)" \
 		-ex "load"
 
@@ -119,7 +114,7 @@ oocd-build: ## Build OpenOCD binaries.
 	@cd $(OPENOCD_ROOT) && ./bootstrap && ./configure --enable-ftdi && $(MAKE) -j$(shell nproc)
 
 .PHONY: oocd-start
-oocd-start: ## Start OpenOCD in interactive mode.
+oocd-start: ## Start OpenOCD.
 	@if [ ! -x "$(OPENOCD_ROOT)/src/$(OpenOCD)" ]; then \
 		echo "Build OpenOCD first."; exit 1; fi
 	@mkdir -p $(CHESSY_ROOT)/log
@@ -147,10 +142,10 @@ board-flash-clean: ## Clean temporary files after flashing the board.
 	@rm -rf $(CHESSY_ROOT)/tmp
 
 .PHONY: board-uart
-board-uart: ## Start UART adapter in interactive mode.
+board-uart: ## Start the UART adapter.
 	@$(PYTHON) $(CHESSY_ROOT)/hw/scripts/uart_adapter_host.py
 
 .PHONY: board-uart-stop
-board-uart-stop: ## Stop UART adapter.
+board-uart-stop: ## Stop the UART adapter.
 	@pkill -u $(USER) -9 -x -f "$(CHESSY_ROOT)/hw/scripts/uart_adapter_host.py" || true && \
 	echo "UART adapter process killed."
